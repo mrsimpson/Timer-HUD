@@ -1,0 +1,169 @@
+name: Test CI Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: true
+        default: 'build'
+        type: choice
+        options:
+          - build
+          - full
+      debug_mode:
+        description: 'Enable debug output'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Display build environment
+        run: |
+          echo "Java version:"
+          java -version
+          echo "Gradle version:"
+          ./gradlew --version
+          echo "Project configuration:"
+          cat gradle.properties
+          echo "Test type: ${{ github.event.inputs.test_type }}"
+          echo "Debug mode: ${{ github.event.inputs.debug_mode }}"
+
+      - name: Run tests
+        run: |
+          if [ "${{ github.event.inputs.debug_mode }}" = "true" ]; then
+            ./gradlew test --no-daemon --info --stacktrace
+          else
+            ./gradlew test --no-daemon --info
+          fi
+
+      - name: Build JAR
+        run: |
+          if [ "${{ github.event.inputs.debug_mode }}" = "true" ]; then
+            ./gradlew build --no-daemon --info --stacktrace
+          else
+            ./gradlew build --no-daemon --info
+          fi
+
+      - name: Validate build outputs
+        run: |
+          echo "Build directory structure:"
+          find build -type f -name "*.jar" | head -10
+          echo ""
+          echo "Generated JARs:"
+          ls -la build/libs/
+          echo ""
+          for jar in build/libs/*.jar; do
+            if [ -f "$jar" ]; then
+              echo "=== $(basename "$jar") ==="
+              echo "Size: $(stat -c%s "$jar") bytes"
+              echo "First 10 entries:"
+              jar -tf "$jar" | head -10
+              echo ""
+            fi
+          done
+
+      - name: Test JAR integrity
+        run: |
+          echo "Testing JAR integrity..."
+          for jar in build/libs/MinecraftTimer-*.jar; do
+            if [ -f "$jar" ]; then
+              echo "Testing $jar"
+              # Test if JAR can be opened
+              jar -tf "$jar" > /dev/null && echo "✓ JAR structure is valid" || echo "✗ JAR structure is invalid"
+              # Check for fabric.mod.json
+              if jar -tf "$jar" | grep -q "fabric.mod.json"; then
+                echo "✓ fabric.mod.json found"
+                jar -xf "$jar" fabric.mod.json && cat fabric.mod.json && rm fabric.mod.json
+              else
+                echo "✗ fabric.mod.json missing"
+              fi
+            fi
+          done
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-ci-artifacts-${{ github.run_number }}
+          path: |
+            build/libs/*.jar
+            build/reports/tests/
+            build/test-results/
+          retention-days: 7
+
+  test-release-simulation:
+    if: github.event.inputs.test_type == 'full'
+    needs: test-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-ci-artifacts-${{ github.run_number }}
+          path: build/
+
+      - name: Simulate release preparation
+        run: |
+          echo "Simulating release process..."
+          echo "Available JARs for release:"
+          ls -la build/libs/
+
+          # Simulate version extraction
+          SIMULATED_VERSION="v0.2.7-test"
+          echo "Simulated version: $SIMULATED_VERSION"
+
+          # Check what would be released
+          echo "Files that would be included in release:"
+          for jar in build/libs/*.jar; do
+            if [ -f "$jar" ]; then
+              echo "  - $(basename "$jar") ($(stat -c%s "$jar") bytes)"
+            fi
+          done
+
+      - name: Verify release readiness
+        run: |
+          echo "Release readiness check:"
+
+          # Check if main JAR exists
+          if ls build/libs/MinecraftTimer-*.jar 1> /dev/null 2>&1; then
+            echo "✓ Main JAR found"
+          else
+            echo "✗ Main JAR missing"
+            exit 1
+          fi
+
+          # Check if sources JAR exists
+          if ls build/libs/MinecraftTimer-*-sources.jar 1> /dev/null 2>&1; then
+            echo "✓ Sources JAR found"
+          else
+            echo "✗ Sources JAR missing"
+            exit 1
+          fi
+
+          echo "✓ Release simulation completed successfully"
