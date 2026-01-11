@@ -154,7 +154,7 @@ public class GUI extends Screen {
             if (this.minecraft.player != null) {
                 GameProfile profile = this.minecraft.player.getGameProfile();
                 if (profile == null) {
-                    playerName = this.minecraft.player.getEntityName();
+                    playerName = this.minecraft.player.getName().getString();
                 } else {
                     playerName = profile.getId().toString();
                 }

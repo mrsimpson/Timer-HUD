@@ -1,7 +1,7 @@
 package net.bopbopstudios.timer_hud.commands;
 
 import com.mojang.brigadier.context.CommandContext;
-import net.bopbopstudios.timer_hud.notification.NotificationCommandLogic;
+import net.bopbopstudios.timer_hud.commands.NotificationCommandLogic;
 import net.bopbopstudios.timer_hud.utils.GUI;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
