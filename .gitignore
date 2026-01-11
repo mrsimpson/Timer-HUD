@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+.gradle/
+run/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Test files
+*TestRunner.java
+*TestRunner.class
+
+# Temporary files
+.crowd/
+Timer-HUD/
+example-mod/
+skyblocker-test/
+*.backup
+
+# Development tools
+.vibe/

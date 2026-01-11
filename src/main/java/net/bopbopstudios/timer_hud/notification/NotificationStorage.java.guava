@@ -1,0 +1,120 @@
+package net.bopbopstudios.timer_hud.notification;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+
+import java.io.*;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Handles persistent storage of notification settings for different timer IDs.
+ * Stores notification durations in a file format compatible with the existing storage system.
+ */
+public class NotificationStorage {
+    
+    private final File storageDirectory;
+    private final File notificationFile;
+    private final String separator = " -> ";
+    private Map<String, Duration> notificationDurations;
+    
+    /**
+     * Creates a new NotificationStorage with the specified storage directory.
+     * 
+     * @param storageDirectory the directory to store notification data
+     */
+    public NotificationStorage(File storageDirectory) {
+        this.storageDirectory = storageDirectory;
+        this.notificationFile = new File(storageDirectory, "notifications.txt");
+        this.notificationDurations = new HashMap<>();
+        readFile();
+    }
+    
+    /**
+     * Saves a notification duration for a specific timer ID.
+     * 
+     * @param timerId the timer identifier
+     * @param duration the notification duration to save
+     */
+    public void saveNotificationDuration(String timerId, Duration duration) {
+        notificationDurations.put(timerId, duration);
+        writeFile();
+    }
+    
+    /**
+     * Gets the notification duration for a specific timer ID.
+     * 
+     * @param timerId the timer identifier
+     * @return the notification duration, or null if not set
+     */
+    public Duration getNotificationDuration(String timerId) {
+        return notificationDurations.get(timerId);
+    }
+    
+    /**
+     * Clears the notification duration for a specific timer ID.
+     * 
+     * @param timerId the timer identifier
+     */
+    public void clearNotificationDuration(String timerId) {
+        notificationDurations.remove(timerId);
+        writeFile();
+    }
+    
+    /**
+     * Reads notification data from the storage file.
+     */
+    private void readFile() {
+        notificationDurations.clear();
+        
+        if (!notificationFile.exists()) {
+            return;
+        }
+        
+        try (BufferedReader reader = Files.newReader(notificationFile, Charsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    continue;
+                }
+                
+                String[] parts = line.split(separator, 2);
+                if (parts.length == 2) {
+                    String timerId = parts[0];
+                    try {
+                        long millis = Long.parseLong(parts[1]);
+                        Duration duration = Duration.ofMillis(millis);
+                        notificationDurations.put(timerId, duration);
+                    } catch (NumberFormatException e) {
+                        // Skip invalid lines
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // Failed to read file, start with empty data
+        }
+    }
+    
+    /**
+     * Writes notification data to the storage file.
+     */
+    private void writeFile() {
+        try {
+            // Ensure parent directory exists
+            storageDirectory.mkdirs();
+            
+            try (BufferedWriter writer = Files.newWriter(notificationFile, Charsets.UTF_8)) {
+                for (Map.Entry<String, Duration> entry : notificationDurations.entrySet()) {
+                    String timerId = entry.getKey();
+                    long millis = entry.getValue().toMillis();
+                    writer.write(timerId + separator + millis + "\n");
+                }
+                writer.flush();
+            }
+        } catch (IOException e) {
+            // Failed to write file - notification settings will not persist
+        }
+    }
+}

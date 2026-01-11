@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.bopbopstudios.timer_hud.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+  ],
+  "client": [
+    "DisconnectMixin",
+    "GUIMixin",
+    "NetworkMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

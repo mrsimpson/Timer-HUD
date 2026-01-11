@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraft_timer",
+  "version": "${version}",
+  "name": "Minecraft Timer",
+  "description": "Enhanced timer HUD with notification alerts for Minecraft",
+  "authors": [],
+  "contact": {
+    "repo": "https://github.com/lewis/Timer HUD"
+  },
+  "license": "All-Rights-Reserved",
+  "icon": "assets/timer_hud/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.bopbopstudios.timer_hud.client.TimerHUDClient"
+    ],
+    "main": [
+      "net.bopbopstudios.timer_hud.TimerHUD"
+    ]
+  },
+  "mixins": [
+    "timer_hud.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
